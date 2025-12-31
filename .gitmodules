@@ -1,0 +1,3 @@
+[submodule "vendor/logger"]
+	path = vendor/logger
+	url = git@github.com:ASR-CuriousOne/logger.git
