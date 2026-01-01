@@ -1,9 +1,6 @@
-#include <iostream>
-#include <format>
-#include <string>
+#include <logger/logger.hpp>
 
 int main(){
-	std::string hello = "World";
-
-	std::cout << std::format("Hello {}",hello) << std::endl;
+	Logger::setLevel(Logger::LogLevel::WARNING);
+	Logger::fatal("Hello There");
 }

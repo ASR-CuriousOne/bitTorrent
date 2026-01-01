@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_subdirectory(src/core)
+set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
 add_subdirectory(vendor/logger)
 
 add_executable(torrent src/main.cpp)
