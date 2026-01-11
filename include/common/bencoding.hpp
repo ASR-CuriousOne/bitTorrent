@@ -1,3 +1,4 @@
+#pragma once
 #include <logger/logger.hpp>
 #include <map>
 #include <string>
