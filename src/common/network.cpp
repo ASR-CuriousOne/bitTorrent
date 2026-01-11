@@ -64,9 +64,9 @@ UDPConnector::~UDPConnector() {
   close(m_sockv6);
 }
 
-int UDPConnector::sendToTracker(const std::string &host,
+int UDPConnector::sendTo(const std::string &host,
                                 const std::string &port,
-                                std::span<std::byte> bytes) {
+                                const std::span<const std::byte> &bytes) {
   struct addrinfo hints{.ai_family = AF_UNSPEC,
                         .ai_socktype = SOCK_DGRAM,
                         .ai_protocol = IPPROTO_UDP};
@@ -80,14 +80,14 @@ int UDPConnector::sendToTracker(const std::string &host,
     if (it->ai_family == AF_INET6 && m_sockv6 != -1) {
       Logger::debug("Found IPv6 address sending message over IPv6.");
       if (sendto(m_sockv6, bytes.data(), bytes.size(), 0, it->ai_addr,
-                 it->ai_addrlen) != 0) {
+                 it->ai_addrlen) < 0) {
         logAndThrowFatal("Send To Tracker", "Sending over IPv6 failed");
       }
       break;
     } else if (it->ai_family == AF_INET && m_sockv4 != -1) {
       Logger::debug("Found IPv4 address sending message over IPv4.");
       if (sendto(m_sockv4, bytes.data(), bytes.size(), 0, it->ai_addr,
-                 it->ai_addrlen) != 0) {
+                 it->ai_addrlen) < 0) {
         logAndThrowFatal("Send To Tracker", "Sending over IPv4 failed");
       }
       break;

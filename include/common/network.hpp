@@ -10,26 +10,27 @@ namespace BTCore {
 
 class UDPConnector {
 private:
-	std::atomic<bool> m_isRunning = false;
-	std::jthread m_recieverThread;
+  std::atomic<bool> m_isRunning = false;
+  std::jthread m_recieverThread;
 
-	const int m_port = 6881;
+  const int m_port = 6881;
 
-	int m_sockv4 = -1;
-	int m_sockv6 = -1;
+  int m_sockv4 = -1;
+  int m_sockv6 = -1;
 
-	void initSockets();
+  void initSockets();
+
+  void recieve();
+  void handleRead(int fd, std::vector<char> &buffer);
 
 public:
-	UDPConnector(int port);
+  UDPConnector(int port);
 
-	~UDPConnector();
+  ~UDPConnector();
 
-	int sendToTracker(const std::string& host,const std::string& port, std::span<std::byte> bytes);
+  int sendTo(const std::string &host, const std::string &port,
+                    const std::span<const std::byte>& bytes);
 
-	void recieve();
-
-	void handleRead(int fd, std::vector<char>& buffer);
 
 };
 } // namespace BTCore
