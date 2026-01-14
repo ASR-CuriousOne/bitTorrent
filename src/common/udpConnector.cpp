@@ -12,6 +12,7 @@
 #include <sys/types.h>
 #include <vector>
 
+
 [[noreturn]] void inline logAndThrowFatal(const std::string &origin,
                                           const std::string &message) {
   Logger::fatal(origin, message);
@@ -19,49 +20,20 @@
 }
 
 namespace BTCore {
-UDPConnector::UDPConnector(int port) : m_port(port) {
-  initSockets();
 
+UDPConnector::UDPConnector(int port) :  m_sockv4(AF_INET,port), m_sockv6(AF_INET6, port){
   m_isRunning = true;
   m_recieverThread = std::jthread([this] { this->recieve(); });
-}
 
-void UDPConnector::initSockets() {
-  m_sockv4 = socket(AF_INET, SOCK_DGRAM, 0);
-
-  struct sockaddr_in addr4 = {};
-  addr4.sin_family = AF_INET;
-  addr4.sin_port = htons(m_port);
-  addr4.sin_addr.s_addr = INADDR_ANY;
-
-  if (bind(m_sockv4, reinterpret_cast<struct sockaddr *>(&addr4),
-           sizeof(addr4)) != 0)
-    logAndThrowFatal("UDPConnector", "IPv4 Port binding failed");
-
-  m_sockv6 = socket(AF_INET6, SOCK_DGRAM, 0);
-  int on = 1;
-  setsockopt(m_sockv6, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(on));
-
-  struct sockaddr_in6 addr6 = {};
-  addr6.sin6_family = AF_INET6;
-  addr6.sin6_port = htons(m_port);
-  addr6.sin6_addr = in6addr_any;
-
-  if (bind(m_sockv6, reinterpret_cast<struct sockaddr *>(&addr6),
-           sizeof(addr6)) != 0)
-    logAndThrowFatal("UDPConnector", "IPv6 Port binding failed");
-
-  Logger::info(
+	Logger::info(
       "UDPConnector",
-      std::format("Listening on both ipv4 and ipv6 on port {}", m_port));
+      std::format("Listening on both ipv4 and ipv6 on port {}", port));
 }
+
 
 UDPConnector::~UDPConnector() {
   m_isRunning = false;
   assert(m_recieverThread.joinable());
-
-  close(m_sockv4);
-  close(m_sockv6);
 }
 
 int UDPConnector::sendTo(const std::string &host,
@@ -77,16 +49,16 @@ int UDPConnector::sendTo(const std::string &host,
   }
 
   for (it = resultList; it != NULL; it = it->ai_next) {
-    if (it->ai_family == AF_INET6 && m_sockv6 != -1) {
-      Logger::debug("Found IPv6 address sending message over IPv6.");
-      if (sendto(m_sockv6, bytes.data(), bytes.size(), 0, it->ai_addr,
+    if (it->ai_family == AF_INET6 && m_sockv6.get() != -1) {
+      Logger::debug("sendTo","Found IPv6 address sending message over IPv6.");
+      if (sendto(m_sockv6.get(), bytes.data(), bytes.size(), 0, it->ai_addr,
                  it->ai_addrlen) < 0) {
         logAndThrowFatal("Send To Tracker", "Sending over IPv6 failed");
       }
       break;
-    } else if (it->ai_family == AF_INET && m_sockv4 != -1) {
-      Logger::debug("Found IPv4 address sending message over IPv4.");
-      if (sendto(m_sockv4, bytes.data(), bytes.size(), 0, it->ai_addr,
+    } else if (it->ai_family == AF_INET && m_sockv4.get() != -1) {
+      Logger::debug("sendTo","Found IPv4 address sending message over IPv4.");
+      if (sendto(m_sockv4.get(), bytes.data(), bytes.size(), 0, it->ai_addr,
                  it->ai_addrlen) < 0) {
         logAndThrowFatal("Send To Tracker", "Sending over IPv4 failed");
       }
@@ -98,11 +70,15 @@ int UDPConnector::sendTo(const std::string &host,
   return 0;
 }
 
+void UDPConnector::setOnReceive(ReceiveCallback cb){
+	m_onReceive = std::move(cb);
+}
+
 void UDPConnector::recieve() {
   std::array<struct pollfd, 2> fds;
 
-  fds[0] = {m_sockv4, POLLIN, 0};
-  fds[1] = {m_sockv6, POLLIN, 0};
+  fds[0] = {m_sockv4.get(), POLLIN, 0};
+  fds[1] = {m_sockv6.get(), POLLIN, 0};
 
   std::vector<char> buffer(4096);
 
@@ -129,5 +105,12 @@ void UDPConnector::handleRead(int fd, std::vector<char> &buffer) {
   if (n > 0)
     Logger::info("handle Read", std::format("Received {} bytes from sender: {}",
                                             n, sender.ss_family));
+	if(m_onReceive){
+		Packet p;
+		p.payload.assign(buffer.begin(),buffer.end());
+		p.sender = sender;
+
+		m_onReceive(std::move(p));
+	}
 }
 } // namespace BTCore

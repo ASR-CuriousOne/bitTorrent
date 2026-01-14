@@ -1,8 +1,6 @@
-#include <common/bencoding.hpp>
-#include <common/network.hpp>
+#include <client/bitClient.hpp>
 #include <iostream>
 #include <logger/logger.hpp>
-#include <span>
 #include <string>
 
 int main(int argc, char *argv[]) {
@@ -10,6 +8,7 @@ int main(int argc, char *argv[]) {
   std::span<char *> args(argv, argc);
 	
 	std::string hostname, port;
+
 
   if (args.size() < 2) {
     std::cerr << "Tracker hostname or port not provided \n Usage ./client.out "
@@ -20,10 +19,6 @@ int main(int argc, char *argv[]) {
   hostname = std::string(args[1]);
   port = std::string(args[2]);
 
-	BTCore::UDPConnector udpCon(6881);
-
-	std::string message = "Hello from client\n";
-	auto const messageBytes = std::as_bytes(std::span{message});
-
-	udpCon.sendTo(hostname, port, messageBytes);
+	BTClient::Client client;
+	client.connectToTracker(hostname, port);
 }
