@@ -1,7 +1,9 @@
-#include <client/bitClient.hpp>
+#include <client/torrentSession.hpp>
+#include <client/networkEngine.hpp>
 #include <iostream>
 #include <logger/logger.hpp>
 #include <string>
+#include <memory>
 
 int main(int argc, char *argv[]) {
 
@@ -18,7 +20,9 @@ int main(int argc, char *argv[]) {
   }
   hostname = std::string(args[1]);
   port = std::string(args[2]);
+	
+	BTClient::NetworkEngine networkEngine;
 
-	BTClient::Client client;
-	client.connectToTracker(hostname, port);
+	std::shared_ptr<BTClient::TorrentSession> currentSession = std::make_shared<BTClient::TorrentSession>(networkEngine);
+	currentSession->connectToTracker(hostname, port);
 }
