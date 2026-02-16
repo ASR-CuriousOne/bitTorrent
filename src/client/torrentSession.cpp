@@ -45,12 +45,16 @@ void TorrentSession::connectToTracker(const std::string &hostname,
   response.action = ntohl(response.action);
   response.transactionId = ntohl(response.transactionId);
   response.connectionId = be32toh(response.connectionId);
+	
+	m_connectionId = static_cast<uint64_t>(response.connectionId);
 
   Logger::info("connectToTracker",
                std::format("Response received with connection id {} ",
-                           static_cast<uint64_t>(response.connectionId)));
+                           m_connectionId));
   Logger::info("connectToTracker",
                std::format("Transaction Id Orig: {} Rec: {}", transactionId,
                            static_cast<uint32_t>(response.transactionId)));
 }
+
+
 } // namespace BTClient

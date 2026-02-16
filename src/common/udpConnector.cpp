@@ -45,7 +45,7 @@ int UDPConnector::sendTo(const std::string &host,
   struct addrinfo *resultList, *it;
 
   if (getaddrinfo(host.c_str(), port.c_str(), &hints, &resultList) != 0) {
-    logAndThrowFatal("Send To Tracker", "Unable to get addresultLists info");
+    logAndThrowFatal("Send To Tracker", std::format("Unable to get addresultLists info for {} on port {}", host, port));
   }
 
   for (it = resultList; it != NULL; it = it->ai_next) {
