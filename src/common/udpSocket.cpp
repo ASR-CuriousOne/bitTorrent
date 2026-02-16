@@ -14,6 +14,7 @@ UDPSocket::UDPSocket(int af) {
 UDPSocket::UDPSocket(int af, int port) {
 	m_family = af;
   m_fd = socket(af, SOCK_DGRAM, 0);
+	m_port = port;
 
   if (m_fd < 0)
     Utils::logAndThrowFatal("UDPSocket", "Failed to create udp socket");

@@ -13,6 +13,7 @@ namespace BTCore {
 class UDPSocket {
   int m_fd = -1;
 	int m_family = AF_INET;
+	int m_port;
 
 public:
   UDPSocket(int af);
@@ -26,8 +27,10 @@ public:
   ~UDPSocket();
 
 	int get(){return m_fd;}
+	int getPort(){return m_port;}
 
 	void bindToPort(int port);
+
 };
 
 struct Packet{
@@ -58,5 +61,7 @@ public:
              const std::span<const std::byte> &bytes);
 
 	void setOnReceive(ReceiveCallback cb);
+
+	int getPort(){return m_sockv4.getPort();}
 };
 } // namespace BTCore

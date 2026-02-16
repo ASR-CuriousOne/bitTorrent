@@ -1,10 +1,13 @@
 #pragma once
+#include "common/bencoding.hpp"
+#include <array>
 #include <client/networkEngine.hpp>
 #include <common/network.hpp>
 #include <common/peers.hpp>
 #include <common/queue.hpp>
 #include <common/transIdGen.hpp>
 #include <vector>
+#include <filesystem>
 
 namespace BTClient {
 
@@ -12,7 +15,11 @@ class NetworkEngine;
 
 class TorrentSession : public std::enable_shared_from_this<TorrentSession> {
 public:
+	BTCore::BNode m_fileRoot;
+
   TorrentSession(NetworkEngine &networkEngine);
+
+	void startTorrent(std::filesystem::path torrentFilePath);
 
   void receivePacket(BTCore::Packet packet);
 
@@ -26,7 +33,7 @@ private:
 
 	uint64_t m_connectionId = 0;
 
-  std::string m_infoHash;
+	std::array<uint32_t, 5> m_infoHash;
 
   std::vector<BTCore::PeerInfo> m_ipv4Peers;
   std::vector<BTCore::PeerInfoIPv6> m_ipv6Peers;

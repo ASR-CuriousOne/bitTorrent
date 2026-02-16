@@ -28,5 +28,7 @@ public:
   void sendPacket(const std::string& host, const std::string& port, 
                     const std::span<const std::byte>& data);
 	void registerTransaction(uint32_t tid, std::weak_ptr<TorrentSession> session);
+
+	int getPort() const{return m_port;}
 };
 } // namespace BTClient
