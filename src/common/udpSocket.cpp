@@ -1,4 +1,5 @@
 #include <common/network.hpp>
+#include <common/shared.hpp>
 #include <common/utils.hpp>
 #include <format>
 
@@ -8,18 +9,20 @@ UDPSocket::UDPSocket(int af) {
   m_fd = socket(af, SOCK_DGRAM, 0);
 
   if (m_fd < 0)
-    Utils::logAndThrowFatal("UDPSocket", "Failed to create udp socket");
+    Utils::logAndThrowFatal(g_logger, "UDPSocket",
+                            "Failed to create udp socket");
 }
 
 UDPSocket::UDPSocket(int af, int port) {
-	m_family = af;
+  m_family = af;
   m_fd = socket(af, SOCK_DGRAM, 0);
-	m_port = port;
+  m_port = port;
 
   if (m_fd < 0)
-    Utils::logAndThrowFatal("UDPSocket", "Failed to create udp socket");
+    Utils::logAndThrowFatal(g_logger, "UDPSocket",
+                            "Failed to create udp socket");
 
-	bindToPort(port);
+  bindToPort(port);
 }
 
 UDPSocket::~UDPSocket() {
@@ -39,7 +42,8 @@ void UDPSocket::bindToPort(int port) {
 
     if (bind(m_fd, reinterpret_cast<struct sockaddr *>(&addr4),
              sizeof(addr4)) != 0)
-      Utils::logAndThrowFatal("Binding Port", "IPv4 Port binding failed");
+      Utils::logAndThrowFatal(g_logger, "Binding Port",
+                              "IPv4 Port binding failed");
 
     break;
   }
@@ -54,12 +58,13 @@ void UDPSocket::bindToPort(int port) {
 
     if (bind(m_fd, reinterpret_cast<struct sockaddr *>(&addr6),
              sizeof(addr6)) != 0)
-      Utils::logAndThrowFatal("UDPConnector", "IPv6 Port binding failed");
+      Utils::logAndThrowFatal(g_logger, "UDPConnector",
+                              "IPv6 Port binding failed");
     break;
   }
   default: {
     Utils::logAndThrowFatal(
-        "Binding Port",
+        g_logger, "Binding Port",
         std::format("Socket of family {} cannot be constructed", m_family));
   }
   }

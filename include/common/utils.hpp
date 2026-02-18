@@ -3,9 +3,9 @@
 #include <stdexcept>
 
 namespace BTCore::Utils {
-[[noreturn]] void inline logAndThrowFatal(const std::string &origin,
+[[noreturn]] void inline logAndThrowFatal(Logger::Logger &logger, const std::string &origin,
                                           const std::string &message) {
-  Logger::fatal(origin, message);
+  logger.fatal(origin, message);
   throw std::runtime_error(message);
 }
 

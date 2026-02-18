@@ -1,6 +1,7 @@
 #include <common/bencoding.hpp>
 #include <common/sha1.hpp>
 #include <common/utils.hpp>
+#include <common/shared.hpp>
 #include <iostream>
 
 namespace BTCore {
@@ -35,7 +36,7 @@ std::string BEncoder::bencode(const BNode &node) {
 
 BNode BDecoder::parseElement(const std::string &source, size_t &index) {
   if (index >= source.length())
-    Utils::logAndThrowFatal("Parse Element", "Unexpected end of source");
+    Utils::logAndThrowFatal(g_logger, "Parse Element", "Unexpected end of source");
 
   char c = source[index];
 
@@ -48,7 +49,7 @@ BNode BDecoder::parseElement(const std::string &source, size_t &index) {
   } else if (std::isdigit(c)) {
     return parseString(source, index);
   } else {
-    Utils::logAndThrowFatal("Parse Element", "Invalid charactor at index " +
+    Utils::logAndThrowFatal(g_logger, "Parse Element", "Invalid charactor at index " +
                                                  std::to_string(index));
   }
 }
@@ -57,7 +58,7 @@ BNode BDecoder::parseInt(const std::string &source, size_t &index) {
   index++;
   size_t end = source.find('e', index);
   if (end == std::string::npos)
-    Utils::logAndThrowFatal("Parse Int", "Unterminated Integer");
+    Utils::logAndThrowFatal(g_logger, "Parse Int", "Unterminated Integer");
 
   std::string numStr = source.substr(index, end - index);
   long long val = std::stoll(numStr);
@@ -69,13 +70,13 @@ BNode BDecoder::parseInt(const std::string &source, size_t &index) {
 BNode BDecoder::parseString(const std::string &source, size_t &index) {
   size_t colon = source.find(':', index);
   if (colon == std::string::npos)
-    Utils::logAndThrowFatal("Parse String", "Invalid String Format");
+    Utils::logAndThrowFatal(g_logger, "Parse String", "Invalid String Format");
 
   long long len = std::stoll(source.substr(index, colon - index));
   size_t start = colon + 1;
 
   if (start + len > source.length())
-    Utils::logAndThrowFatal("Parse String", "String out of bounds");
+    Utils::logAndThrowFatal(g_logger, "Parse String", "String out of bounds");
 
   std::string str = source.substr(start, len);
   index = start + len;
@@ -91,7 +92,7 @@ BNode BDecoder::parseList(const std::string &source, size_t &index) {
   }
 
   if (index >= source.length())
-    Utils::logAndThrowFatal("Parse List", "Unterminated list");
+    Utils::logAndThrowFatal(g_logger, "Parse List", "Unterminated list");
 
   index++;
   return BNode{list};
@@ -104,7 +105,7 @@ BNode BDecoder::parseDict(const std::string &source, size_t &index) {
   while (index < source.length() && source[index] != 'e') {
     BNode keyNode = parseString(source, index);
     if (!keyNode.is<BString>())
-      Utils::logAndThrowFatal("Parse Dict", "Dictionary key must be string");
+      Utils::logAndThrowFatal(g_logger, "Parse Dict", "Dictionary key must be string");
 
     std::string key = keyNode.get<BString>();
     BNode value = parseElement(source, index);
@@ -113,7 +114,7 @@ BNode BDecoder::parseDict(const std::string &source, size_t &index) {
   }
 
   if (index >= source.length())
-    Utils::logAndThrowFatal("Parse Dict", "Unterminated Dictionary");
+    Utils::logAndThrowFatal(g_logger, "Parse Dict", "Unterminated Dictionary");
 
   index++;
   return BNode{dict};
@@ -155,13 +156,13 @@ void BNode::printNode(const BNode &node, int indent) const {
 std::array<uint32_t, 5> calculateInfoHash(const BNode &root) {
 
   if (!root.is<BDict>()) {
-    Utils::logAndThrowFatal("InfoHash",
+    Utils::logAndThrowFatal(g_logger, "InfoHash",
                             "Invalid torrent file: Root is not a dictionary");
   }
 
   const auto &rootDict = root.get<BDict>();
   if (rootDict.find("info") == rootDict.end()) {
-    Utils::logAndThrowFatal("InfoHash",
+    Utils::logAndThrowFatal(g_logger, "InfoHash",
                             "Invalid torrent file: 'info' key not found");
   }
 

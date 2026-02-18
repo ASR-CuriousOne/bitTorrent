@@ -1,26 +1,27 @@
-#include "common/bencoding.hpp"
-#include "logger/log.hpp"
-#include "logger/logger.hpp"
 #include <array>
 #include <cassert>
 #include <client/defs.hpp>
 #include <client/torrentSession.hpp>
+#include <common/bencoding.hpp>
 #include <common/utils.hpp>
 #include <cstring>
 #include <endian.h>
 #include <fstream>
 #include <iostream>
+#include <logger/logger.hpp>
 #include <netinet/in.h>
 
 namespace BTClient {
-TorrentSession::TorrentSession(NetworkEngine &networkEngine)
-    : m_networkEngine(networkEngine) {}
+TorrentSession::TorrentSession(Logger::Logger &torrentLogger,
+                               NetworkEngine &networkEngine)
+    : m_torrentLogger(torrentLogger), m_networkEngine(networkEngine) {}
 
 void TorrentSession::startTorrent(std::filesystem::path torrentFilePath) {
   std::ifstream file(torrentFilePath, std::ios::binary);
   if (!file.is_open()) {
-    BTCore::Utils::logAndThrowFatal("InfoHash", "Failed to open file: " +
-                                                    torrentFilePath.string());
+    BTCore::Utils::logAndThrowFatal(m_torrentLogger, "InfoHash",
+                                    "Failed to open file: " +
+                                        torrentFilePath.string());
   }
 
   std::stringstream buffer;
@@ -33,9 +34,10 @@ void TorrentSession::startTorrent(std::filesystem::path torrentFilePath) {
 
   assert(tracker.protocol == "udp");
 
-  Logger::debug("Start Torrent",
-                std::format("Hostname {} on port {} with protocol {}",
-                            tracker.hostname, tracker.port, tracker.protocol));
+  m_torrentLogger.debug("Start Torrent",
+                        std::format("Hostname {} on port {} with protocol {}",
+                                    tracker.hostname, tracker.port,
+                                    tracker.protocol));
 
   connectToTracker(tracker.hostname, tracker.port);
   announce(tracker.hostname, tracker.port);
@@ -52,7 +54,8 @@ void TorrentSession::connectToTracker(const std::string &hostname,
 
   uint32_t transactionId = m_transIdGen.generate();
 
-  Logger::debug("connectToTracker", std::format("T id: {}", transactionId));
+  m_torrentLogger.debug("connectToTracker",
+                        std::format("T id: {}", transactionId));
   m_networkEngine.registerTransaction(transactionId, weak_from_this());
 
   ConnectRequest req;
@@ -68,7 +71,8 @@ void TorrentSession::connectToTracker(const std::string &hostname,
   m_incomingQueue.waitAndPop(connectionRes);
 
   if (connectionRes.payload.size() < sizeof(ConnectResponse)) {
-    BTCore::Utils::logAndThrowFatal("connectToTracker", "Response too small");
+    BTCore::Utils::logAndThrowFatal(m_torrentLogger, "connectToTracker",
+                                    "Response too small");
   }
 
   ConnectResponse response;
@@ -80,12 +84,13 @@ void TorrentSession::connectToTracker(const std::string &hostname,
 
   m_connectionId = static_cast<uint64_t>(response.connectionId);
 
-  Logger::info(
+  m_torrentLogger.info(
       "connectToTracker",
       std::format("Response received with connection id {} ", m_connectionId));
-  Logger::info("connectToTracker",
-               std::format("Transaction Id Orig: {} Rec: {}", transactionId,
-                           static_cast<uint32_t>(response.transactionId)));
+  m_torrentLogger.info(
+      "connectToTracker",
+      std::format("Transaction Id Orig: {} Rec: {}", transactionId,
+                  static_cast<uint32_t>(response.transactionId)));
 }
 
 void TorrentSession::announce(const std::string &hostname,
@@ -93,8 +98,8 @@ void TorrentSession::announce(const std::string &hostname,
   const uint32_t ACTION_ANNOUNCE = 1;
   uint32_t transactionId = m_transIdGen.generate();
 
-  Logger::debug("announce",
-                std::format("Starting announce. T id: {}", transactionId));
+  m_torrentLogger.debug(
+      "announce", std::format("Starting announce. T id: {}", transactionId));
   m_networkEngine.registerTransaction(transactionId, weak_from_this());
 
   AnnounceRequest req;
@@ -124,7 +129,7 @@ void TorrentSession::announce(const std::string &hostname,
   m_incomingQueue.waitAndPop(announceResPkt);
 
   if (announceResPkt.payload.size() < sizeof(AnnounceResponse)) {
-    BTCore::Utils::logAndThrowFatal("announce",
+    BTCore::Utils::logAndThrowFatal(m_torrentLogger, "announce",
                                     "Response too small to be valid");
   }
 
@@ -142,21 +147,21 @@ void TorrentSession::announce(const std::string &hostname,
     if (announceResPkt.payload.size() > 8) {
       std::string errorMsg(announceResPkt.payload.begin() + 8,
                            announceResPkt.payload.end());
-      Logger::error("announce", "Tracker returned error: " + errorMsg);
+      m_torrentLogger.error("announce", "Tracker returned error: " + errorMsg);
     } else {
-      Logger::error("announce", "Tracker returned error (no message)");
+      m_torrentLogger.error("announce", "Tracker returned error (no message)");
     }
     return;
   }
 
   if (response.transactionId != transactionId) {
-    Logger::error("announce", "Transaction ID mismatch in response");
+    m_torrentLogger.error("announce", "Transaction ID mismatch in response");
     return;
   }
   if (response.action != ACTION_ANNOUNCE) {
-    Logger::error("announce",
-                  std::format("Action mismatch in response {}",
-                              static_cast<uint32_t>(response.action)));
+    m_torrentLogger.error("announce",
+                          std::format("Action mismatch in response {}",
+                                      static_cast<uint32_t>(response.action)));
     return;
   }
 
@@ -164,7 +169,7 @@ void TorrentSession::announce(const std::string &hostname,
   uint32_t leechers = ntohl(response.leechers);
   uint32_t seeders = ntohl(response.seeders);
 
-  Logger::info(
+  m_torrentLogger.info(
       "announce",
       std::format("Tracker Response - Interval: {}s, Leechers: {}, Seeders: {}",
                   interval, leechers, seeders));
@@ -183,8 +188,9 @@ void TorrentSession::announce(const std::string &hostname,
 
       m_ipv4Peers.push_back(peer);
     }
-    Logger::info("announce", std::format("Successfully parsed {} peers.",
-                                         m_ipv4Peers.size()));
+    m_torrentLogger.info(
+        "announce",
+        std::format("Successfully parsed {} peers.", m_ipv4Peers.size()));
   }
 }
 

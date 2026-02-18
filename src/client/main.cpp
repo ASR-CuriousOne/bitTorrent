@@ -5,6 +5,8 @@
 #include <memory>
 #include <string>
 
+Logger::Logger g_logger;
+
 int main(int argc, char *argv[]) {
 
   std::span<char *> args(argv, argc);
@@ -20,9 +22,11 @@ int main(int argc, char *argv[]) {
 
   std::filesystem::path torrentFilePath(args[1]);
 
-  BTClient::NetworkEngine networkEngine(69000);
+	Logger::Logger generalLogger;
+
+  BTClient::NetworkEngine networkEngine(generalLogger,69000);
 
   std::shared_ptr<BTClient::TorrentSession> currentSession =
-      std::make_shared<BTClient::TorrentSession>(networkEngine);
+      std::make_shared<BTClient::TorrentSession>(generalLogger,networkEngine);
   currentSession->startTorrent(torrentFilePath);
 }
